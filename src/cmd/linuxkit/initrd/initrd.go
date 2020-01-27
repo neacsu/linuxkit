@@ -3,7 +3,6 @@ package initrd
 import (
 	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -18,7 +17,6 @@ import (
 // This is a compressed cpio archive, zero padded to 4 bytes
 type Writer struct {
 	pw *pad4.Writer
-	gw *gzip.Writer
 	cw *cpio.Writer
 }
 
@@ -155,8 +153,7 @@ func CopySplitTar(w *Writer, r *tar.Reader) (kernel []byte, cmdline string, ucod
 func NewWriter(w io.Writer) *Writer {
 	initrd := new(Writer)
 	initrd.pw = pad4.NewWriter(w)
-	initrd.gw = gzip.NewWriter(initrd.pw)
-	initrd.cw = cpio.NewWriter(initrd.gw)
+	initrd.cw = cpio.NewWriter(initrd.pw)
 
 	return initrd
 }
@@ -174,16 +171,12 @@ func (w *Writer) Write(b []byte) (n int, e error) {
 // Close closes the writer
 func (w *Writer) Close() error {
 	err1 := w.cw.Close()
-	err2 := w.gw.Close()
-	err3 := w.pw.Close()
+	err2 := w.pw.Close()
 	if err1 != nil {
 		return err1
 	}
 	if err2 != nil {
 		return err2
-	}
-	if err3 != nil {
-		return err3
 	}
 	return nil
 }
